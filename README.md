@@ -147,6 +147,80 @@ BATCH_SIZE = 32              # Encoding batch size
 - Query encoding, document encoding, retrieval operations
 - End-to-end pipeline measurements
 
+## Experimental Results
+
+### System Performance Comparison
+
+#### Accuracy Metrics
+
+| Metric | ColPali (Vision-Based) | Text-Based (OCR) |
+|--------|------------------------|------------------|
+| **NDCG@5** | 22.65% | 19.65% |
+| **Recall@1** | 16.00% | 8.00% |
+| **Recall@5** | 26.00% | 24.00% |
+| **MRR** | 0.2133 | 0.1549 |
+
+#### Two-Stage Pipeline Breakdown
+
+| Stage | ColPali | Text-Based |
+|-------|---------|------------|
+| **Stage 1: Document Recall@5** | 86.00% | 98.00% |
+| **Stage 2: Page Recall (given doc)** | 48.84% | 40.82% |
+| **End-to-End Success** | 42.00% | 40.00% |
+
+**Key Findings:**
+- Text-based system excels at Stage 1 document retrieval (98% vs 86%)
+- ColPali performs better at Stage 2 page discrimination (49% vs 41%)
+- ColPali achieves higher overall retrieval quality (NDCG@5: 22.65% vs 19.65%)
+- Both systems show similar end-to-end success rates (~40-42%)
+
+### Latency Benchmarks
+
+#### P95/P99 Latency Comparison
+
+| Operation | ColPali P95 | Text-Based P95 | Speedup |
+|-----------|-------------|----------------|---------|
+| **Query Encoding (Single)** | 48.80ms | 6.10ms | **8.0x faster** |
+| **Stage 1: Document Retrieval** | 4.11ms | 1.22ms | **3.4x faster** |
+| **Stage 2: Page Retrieval** | 3.55ms | 0.08ms | **46.6x faster** |
+| **End-to-End (Top-5/Top-5)** | 72.43ms | 10.85ms | **6.7x faster** |
+| **End-to-End (Top-10/Top-10)** | 90.35ms | 12.44ms | **7.3x faster** |
+
+**Latency Analysis:**
+- Text-based system is 6-8x faster for end-to-end retrieval
+- ColPali encoding is compute-intensive (vision model overhead)
+- Text-based stage 2 retrieval is exceptionally fast (46x speedup)
+- For latency-critical applications, text-based approach is preferred
+
+### Similarity Analysis Findings
+
+#### Embedding Space Characteristics
+
+| Comparison Type | ColPali Mean Similarity | Std Dev | Key Issue |
+|----------------|------------------------|---------|-----------|
+| **Page vs Page (Same PDF)** | 0.9197 | 0.0984 | High within-doc similarity |
+| **Page vs Page (Different PDF)** | 0.9277 | 0.0444 | Cross-doc similarity higher |
+| **Doc vs Doc (Aggregated)** | 0.9773 | 0.0113 | Extreme clustering |
+| **Query vs Relevant Pages** | 0.7846 | 0.0374 | Lower than expected |
+| **Query vs Irrelevant Pages** | 0.8018 | 0.0506 | **Higher than relevant** |
+
+**Critical Issues Identified:**
+1. **Embedding Space Collapse**: All similarities cluster in 0.75-0.99 range
+2. **Negative Discrimination**: Irrelevant content scores higher than relevant
+3. **High Baseline Similarity**: Document embeddings at 0.98 leave minimal ranking signal
+4. **Document-Level Averaging**: Destroys fine-grained page-level information
+
+### Trade-offs Summary
+
+| Aspect | ColPali Advantage | Text-Based Advantage |
+|--------|------------------|---------------------|
+| **Accuracy** | ✓ Better overall quality (NDCG) | ✗ Lower retrieval precision |
+| **Visual Understanding** | ✓ Native image/table handling | ✗ Loses visual information |
+| **Latency** | ✗ 6-8x slower | ✓ Significantly faster |
+| **Document Retrieval** | ✗ 86% recall | ✓ 98% recall |
+| **Page Discrimination** | ✓ 49% recall | ✗ 41% recall |
+| **Resource Requirements** | ✗ High GPU memory | ✓ Lower compute needs |
+
 ## Performance Tips
 
 ### Improving Accuracy
@@ -189,22 +263,6 @@ BATCH_SIZE = 32              # Encoding batch size
 - CUDA-capable GPU (recommended)
 - 16GB+ RAM
 - Storage for PDFs and model weights
-
-## Citation
-
-If you use ColPali in your research:
-```bibtex
-@article{colpali2024,
-  title={ColPali: Efficient Document Retrieval with Vision Language Models},
-  author={Faysse, Manuel and others},
-  journal={arXiv preprint arXiv:2407.01449},
-  year={2024}
-}
-```
-
-## License
-
-This project is provided for research and educational purposes. Please check the licenses of individual models and datasets used.
 
 ## Acknowledgments
 
